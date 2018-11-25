@@ -40,7 +40,7 @@ class Functions {
     string labels = "\0" ;
     
 public:
-
+    
     void inputSort() {
         orders.clear() ;
         int dataCount = 0 ;
@@ -113,70 +113,110 @@ public:
     
     void simulate() {
         inputSort() ;
-        queue.resize(3) ;
         int denominator = orders.size() ;
         int fail = 0 ;
         int totalDelay = 0 ;
         double failPercent = 0 ;
         
-        while ( queue.size() != 0 && orders.size() != 0 ) { // compare the tasks with the current queue time
+        while ( orders.size() != 0 ) { // compare the tasks with the current queue time
+            cout << "Order Count is : " << orders.size() << endl ;
+            cout << "Current Order is : " << orders.front().orderID << " " << orders.front().arrivalTime << " " << orders.front().duration << " " << orders.front().timeout << endl ;
+            cout << "Current Queue Time is : " << QueueTime1 << endl ;
             
-            cout << "Current Order is : " << orders.front().cookID << " " << orders.front().arrivalTime << " " << orders.front().timeout << endl ;
-            if ( orders.front().arrivalTime > QueueTime1 || orders.size() == 0 ) {
-                if ( queue.size() == 0 ) {
-                    QueueTime1 += orders.front().duration ;
+            if ( orders.front().arrivalTime >= QueueTime1 ) {
+                if ( queue.empty() ) {
+                    cout << "First Order In : " << orders.front().orderID << endl << endl ;
+                    queue.push_back( orders.front() ) ;
                     orders.erase( orders.begin() ) ;
-                } // if the queue is empty, push the time and finish the next order
-                if ( queue.size() <= 3 ) {
-                    if ( QueueTime1 > queue.front().timeout ) QueueTime1 += queue.front().duration ;
+                } // if the queue is empty, push the order in the queue
+                
+                if ( ! queue.empty() ) {
+                    if ( QueueTime1 < queue.front().arrivalTime ) QueueTime1 = queue.front().arrivalTime ;
+                    // push the time
+                    if ( QueueTime1 < queue.front().timeout ) {
+                        QueueTime1 += queue.front().duration ;
+                        if ( QueueTime1 > queue.front().timeout ) {
+                            queue.front().delay = QueueTime1 - queue.front().arrivalTime - queue.front().duration ;
+                            totalDelay += queue.front().delay ;
+                            queue.front().departure = QueueTime1 ;
+                            cout << "push " << queue.front().orderID << " into timeout" << endl << endl ;
+                            timeout.push_back( queue.front() ) ;
+                            fail ++ ;
+                        } // timeout orders
+                    } // after the task is finished, found out that it run out of time
                     else {
                         queue.front().delay = QueueTime1 - queue.front().arrivalTime ;
                         totalDelay += queue.front().delay ;
                         queue.front().abort = QueueTime1 ;
+                        cout << "push " << queue.front().orderID << " into abort" << endl << endl ;
                         abort.push_back( queue.front() ) ;
                         fail ++ ;
                     } // when the task in the queue isn't feasible anymore, abort and count the fail
-                    if ( QueueTime1 > queue.front().timeout ) {
-                        queue.front().delay = QueueTime1 - queue.front().arrivalTime ;
-                        totalDelay += queue.front().delay ;
-                        queue.front().departure = QueueTime1 ;
-                        timeout.push_back( queue.front() ) ;
-                        fail ++ ;
-                    } // after the task is finished, found out that it run out of time
                     queue.erase( queue.begin() ) ;
                 } // if the queue isn't empty, finish the tasks in the queue
             } // first order or orders that orders before current queue time
             
-            else if ( orders.front().arrivalTime <= QueueTime1 ) {
-                if ( queue.size() < 3 ) queue.push_back( orders.front() ) ;
+            else if ( orders.front().arrivalTime < QueueTime1 ) {
+                if ( queue.size() < 3 ) {
+                    cout << "push " << orders.front().orderID << " into queue" << endl << endl ;
+                    queue.push_back( orders.front() ) ;
+                } // push orders into queue
                 else {
-                    queue.front().delay = QueueTime1 - queue.front().arrivalTime ;
-                    totalDelay += queue.front().delay ;
-                    queue.front().abort = QueueTime1 ;
+                    orders.front().delay = 0 ;
+                    orders.front().abort = orders.front().arrivalTime ;
+                    cout << "push " << orders.front().orderID << " into abort" << endl << endl ;
                     abort.push_back( orders.front() ) ;
                     fail ++ ;
                 } // arrival time greater or equal to current queue time
                 orders.erase( orders.begin() ) ;
             } // check the queue to find out should the order be abort or push into the queue
-            
         } // run orders and tasks
         
-        failPercent = fail / denominator * 100 ;
+        while ( queue.size() != 0 ) {
+            if ( QueueTime1 < queue.front().arrivalTime ) QueueTime1 = queue.front().arrivalTime ;
+            // push the time
+            if ( QueueTime1 < queue.front().timeout ) {
+                QueueTime1 += queue.front().duration ;
+                if ( QueueTime1 > queue.front().timeout ) {
+                    queue.front().delay = QueueTime1 - queue.front().arrivalTime - queue.front().duration ;
+                    totalDelay += queue.front().delay ;
+                    queue.front().departure = QueueTime1 ;
+                    cout << "push " << queue.front().orderID << " into timeout" << endl << endl ;
+                    timeout.push_back( queue.front() ) ;
+                    fail ++ ;
+                } // time out orders
+            } // after the task is finished, found out that it run out of time
+            // feasible orders
+            else {
+                queue.front().delay = QueueTime1 - queue.front().arrivalTime ;
+                totalDelay += queue.front().delay ;
+                queue.front().abort = QueueTime1 ;
+                cout << "push " << queue.front().orderID << " into abort" << endl << endl ;
+                abort.push_back( queue.front() ) ;
+                fail ++ ;
+            } // when the task in the queue isn't feasible anymore, abort and count the fail
+            queue.erase( queue.begin() ) ;
+        } // if the queue isn't empty, finish the tasks in the queue
+        
+        failPercent = ( (float)fail / (float)denominator ) * 100 ;
+        if ( FileN == 401 ) output.open( "one401.txt" ) ;
+        else if ( FileN == 402 ) output.open( "one402.txt" ) ;
         // print messages
-        cout << '\t' << "[Abort List]" << endl ;
-        cout << '\t' << "OID" << '\t' << "Delay" << '\t' << "Abort" << endl ;
-        cout << "Abort List size is : " << abort.size() << endl ; // debug line
-        for ( int i = 0 ; i < abort.size() ; i ++ ) cout << "[" << i+1 << "]" << '\t' << abort[i].orderID << '\t' << abort[i].delay << '\t' << abort[i].abort << endl ;
+        output << '\t' << "[Abort List]" << endl ;
+        output << '\t' << "OID" << '\t' << "Delay" << '\t' << "Abort" << endl ;
+        // output << "Abort List size is : " << abort.size() << endl ; // debug line
+        for ( int i = 0 ; i < abort.size() ; i ++ ) output << "[" << i+1 << "]" << '\t' << abort[i].orderID << '\t' << abort[i].delay << '\t' << abort[i].abort << endl ;
         
-        cout << '\t' << "[Timeout List]" << endl ;
-        cout << '\t' << "OID" << '\t' << "Delay" << '\t' << "Departure" << endl ;
-        cout << "Timeout List size is : " << timeout.size() << endl ; // debug line
-        for ( int i = 0 ; i < timeout.size() ; i ++ ) cout << "[" << i+1 << "]" << '\t' << timeout[i].orderID << '\t' << timeout[i].delay << '\t' << timeout[i].departure << endl ;
+        output << '\t' << "[Timeout List]" << endl ;
+        output << '\t' << "OID" << '\t' << "Delay" << '\t' << "Departure" << endl ;
+        // output << "Timeout List size is : " << timeout.size() << endl ; // debug line
+        for ( int i = 0 ; i < timeout.size() ; i ++ ) output << "[" << i+1 << "]" << '\t' << timeout[i].orderID << '\t' << timeout[i].delay << '\t' << timeout[i].departure << endl ;
         
-        cout << "[Total Delay]" << endl ;
-        cout << totalDelay << " min." << endl ;
-        cout << "[Failure Percentage]" << endl ;
-        cout << failPercent << " %" << endl ;
+        output << "[Total Delay]" << endl ;
+        output << totalDelay << " min." << endl ;
+        output << "[Failure Percentage]" << endl ;
+        // output << fail << " / " << denominator << " =" << endl ;
+        output << setprecision(4) << failPercent << " %" << endl ;
         
     }
     
@@ -283,6 +323,7 @@ int main() {
                     
                     else {
                         function2Confirm = true ;
+                        simulate.simulate() ;
                         continueOrNot = true ;
                     } // find sort 401
                 } // test if you have already create a sort file
@@ -293,6 +334,7 @@ int main() {
                     
                     else {
                         function2Confirm = true ;
+                        simulate.simulate() ;
                         continueOrNot = true ;
                     } // find sort 402
                 } // test if you have already create a sort file

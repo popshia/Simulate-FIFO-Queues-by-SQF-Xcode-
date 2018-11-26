@@ -65,7 +65,7 @@ public:
             orders.push_back( tempOrder ) ; // push tempOrder to the orders dataBase
             dataCount++ ;
         } // read and analyze the data
-    } // inputSort()
+    } // input the sort files
 
     void ShellSort() {
         int dataCount = 0 ;
@@ -110,7 +110,7 @@ public:
                 for ( j = i ; j >= gap && orders[j-gap].arrivalTime > temp.arrivalTime ; j -= gap ) orders[j] = orders[j-gap] ;
                 orders[j] = temp ;
             } // for()
-        } // for()
+        } // shell sort
 
         for ( int i = 0 ; i < orders.size() ; i ++ ) {
             if ( orders[i].arrivalTime == orders[i+1].arrivalTime && orders[i].orderID > orders[i+1].orderID ) swap( orders[i], orders[i+1] ) ;
@@ -121,6 +121,7 @@ public:
         for ( int i = 0 ; i < orders.size() ; i ++ ) {
             if ( orders[i].arrivalTime == orders[i+1].arrivalTime && orders[i].orderID > orders[i+1].orderID ) swap( orders[i], orders[i+1] ) ;
         } // for()
+        // sort the data again
 
         sortEnd = clock();
         sortTime = sortEnd - sortTime ; // get the precise time
@@ -131,7 +132,7 @@ public:
         else if ( FileN == 402 ) output.open( "sort402.txt" ) ;
 
         output << labels << endl ;
-        for( int i = 0 ; i < orders.size() ; i ++ ) output << orders[i].whole << endl ;
+        for( int i = 0 ; i < orders.size() ; i ++ ) output << orders[i].whole << endl ; // output data
 
         writeEnd = clock();
         write  = writeEnd - write;
@@ -142,8 +143,8 @@ public:
         cout << "Writing data = " << write * 1000 / CLOCKS_PER_SEC << " ms" << endl << endl ; // print out the time
 
         cout << labels << endl ;
-        for( int i = 0 ; i < orders.size() ; i ++ ) cout << orders[i].whole << endl ;
-    } // shellSort()
+        for( int i = 0 ; i < orders.size() ; i ++ ) cout << orders[i].whole << endl ; // print out the result
+    } // do the shell sort
 
     void Simulate() {
         orders.clear() ;
@@ -154,9 +155,9 @@ public:
         fail = 0 ;
         totalDelay = 0 ;
         int queueTime = 0 ;
-        double failPercent = 0 ;
+        double failureRate = 0 ;
 
-        while ( orders.size() != 0 ) { // compare the tasks with the current queue time
+        while ( orders.size() != 0 ) {
             //cout << "Order Count is : " << orders.size() << endl ;
             //cout << "Current Order is : " << orders.front().orderID << " " << orders.front().arrivalTime << " " << orders.front().duration << " " << orders.front().timeout << endl ;
             //cout << "Current Queue Time is : " << queueTime << endl ;
@@ -205,16 +206,16 @@ public:
                     //cout << "push " << orders.front().orderID << " into abort" << endl << endl ;
                     abort.push_back( orders.front() ) ;
                     fail ++ ;
-                } // arrival time greater or equal to current queue time
+                } // no free space for the new order, abort
                 orders.erase( orders.begin() ) ;
             } // check the queue to find out should the order be abort or push into the queue
         } // run orders and tasks
 
         while ( queue.size() != 0 ) {
-            if ( queueTime < queue.front().arrivalTime ) queueTime = queue.front().arrivalTime ;
+            if ( queueTime < queue.front().arrivalTime ) queueTime = queue.front().arrivalTime ; // push foward the time
             // push the time
             if ( queueTime < queue.front().timeout ) {
-                queueTime += queue.front().duration ;
+                queueTime += queue.front().duration ; // add the duration
                 if ( queueTime > queue.front().timeout ) {
                     queue.front().delay = queueTime - queue.front().arrivalTime - queue.front().duration ;
                     totalDelay += queue.front().delay ;
@@ -223,8 +224,8 @@ public:
                     timeout.push_back( queue.front() ) ;
                     fail ++ ;
                 } // time out orders
-            } // after the task is finished, found out that it run out of time
-            // feasible orders
+            } // feasible orders: after the task is finished, found out that it run out of time
+
             else {
                 queue.front().delay = queueTime - queue.front().arrivalTime ;
                 totalDelay += queue.front().delay ;
@@ -236,7 +237,7 @@ public:
             queue.erase( queue.begin() ) ;
         } // if the queue isn't empty, finish the tasks in the queue
 
-        failPercent = ( (float)fail / (float)denominator ) * 100 ;
+        failureRate = ( (float)fail / (float)denominator ) * 100 ; // count the failure rate
         if ( FileN == 401 ) output.open( "one401.txt" ) ;
         else if ( FileN == 402 ) output.open( "one402.txt" ) ;
         // print messages
@@ -254,8 +255,8 @@ public:
         output << totalDelay << " min." << endl ;
         output << "[Failure Percentage]" << endl ;
         // output << fail << " / " << denominator << " =" << endl ;
-        output << setprecision(4) << failPercent << " %" << endl ;
-    } // singleSimulate()
+        output << setprecision(4) << failureRate << " %" << endl ;
+    } // function 2: single cook simulate
 
     void Queue1() {
         while ( orders.front().arrivalTime >= QueueTime1 ) {
@@ -288,7 +289,7 @@ public:
                 queue1.erase( queue1.begin() ) ;
             } // if the queue1 isn't empty, finish the tasks in the queue1
         } // while()
-    } // Queue1()
+    } // run cook1's queue
 
     void Queue2() {
         while ( orders.front().arrivalTime >= QueueTime2 ) {
@@ -321,7 +322,7 @@ public:
                 queue2.erase( queue2.begin() ) ;
             } // if the queue2 isn't empty, finish the tasks in the queue2
         } // while()
-    } // Queue2()
+    } // run cook2's queue
 
     void DoubleSimulate() {
         QueueTime1 = 0 ;
@@ -333,7 +334,7 @@ public:
         timeout.clear() ;
         InputSort() ;
         int denominator = orders.size() ;
-        double failPercent = 0 ;
+        double failureRate = 0 ;
 
         while ( ! orders.empty() ) {
             Queue1() ;
@@ -345,10 +346,11 @@ public:
                 //cout << "push " << orders.front().orderID << " into abort" << endl << endl ;
                 abort.push_back( orders.front() ) ;
                 fail ++ ;
-            } // abort
+            } // no space in both two cook's queue, abort
 
             else {
-                if ( ( orders.front().arrivalTime >= QueueTime1 && orders.front().arrivalTime >= QueueTime2 ) || ( orders.front().arrivalTime < QueueTime1 && orders.front().arrivalTime < QueueTime2 ) ) {
+                if ( ( orders.front().arrivalTime >= QueueTime1 && orders.front().arrivalTime >= QueueTime2 ) ||
+                     ( orders.front().arrivalTime < QueueTime1 && orders.front().arrivalTime < QueueTime2 ) ) {
                     if ( queue1.size() == queue2.size() ) {
                         orders.front().cookID = 1 ;
                         //cout << "push " << orders.front().orderID << " into queue1" << endl << endl ;
@@ -371,16 +373,17 @@ public:
                 else if ( orders.front().arrivalTime >= QueueTime1 && orders.front().arrivalTime < QueueTime2 ) {
                     queue1.push_back( orders.front() ) ;
                     //cout << "push " << orders.front().orderID << " into queue1" << endl << endl ;
-                } // else if
+                } // cook 1
 
                 else if ( orders.front().arrivalTime >= QueueTime2 && orders.front().arrivalTime < QueueTime1 ) {
                     queue2.push_back( orders.front() ) ;
                     //cout << "push " << orders.front().orderID << " into queue2" << endl << endl ;
-                } // else if
+                } // cook 2
             } // else()
 
             Queue1() ;
             Queue2() ;
+            // run both queues again
             orders.erase( orders.begin() ) ;
         } // run the orders
 
@@ -418,7 +421,7 @@ public:
                     fail ++ ;
                 } // when the task in the queue2 isn't feasible anymore, abort and count the fail
                 queue2.erase( queue2.begin() ) ;
-            }
+            } // queue1 empty, but not queue2
 
             else if ( ! queue1.empty() && queue2.empty() ) {
                 if ( QueueTime1 < queue1.front().arrivalTime ) QueueTime1 = queue1.front().arrivalTime ;
@@ -445,7 +448,7 @@ public:
                     fail ++ ;
                 } // when the task in the queue1 isn't feasible anymore, abort and count the fail
                 queue1.erase( queue1.begin() ) ;
-            }
+            } // queue2 empty, but not queue1
 
             else if ( QueueTime1 <= QueueTime2 ) {
                 if ( QueueTime1 < queue1.front().arrivalTime ) QueueTime1 = queue1.front().arrivalTime ;
@@ -502,7 +505,7 @@ public:
             } // queue2 first
         } // deal the rest*/
 
-        failPercent = ( (float)fail / (float)denominator ) * 100 ;
+        failureRate = ( (float)fail / (float)denominator ) * 100 ;
         if ( FileN == 401 ) output.open( "two401.txt" ) ;
         else if ( FileN == 402 ) output.open( "two402.txt" ) ;
         // print messages
@@ -520,8 +523,8 @@ public:
         output << totalDelay << " min." << endl ;
         output << "[Failure Percentage]" << endl ;
         // output << fail << " / " << denominator << " =" << endl ;
-        output << setprecision(4) << failPercent << " %" << endl ;
-    } // doubleSimulate()
+        output << setprecision(4) << failureRate << " %" << endl ;
+    } // function 3: two cook simulate
 } ;
 
 int main() {
@@ -531,6 +534,7 @@ int main() {
     Functions shellSort ;
     Functions simulate ;
     Functions doubleSimulate ;
+    // declare three classes for each functions
 
     do {
         cout << "*****************************************" << endl ; // welcome message
@@ -597,7 +601,7 @@ int main() {
             FileN = 0 ;
             input.close() ;
             output.close() ;
-        } // mission 2
+        } // mission 1
 
         else if ( command == 2 ) {
 
@@ -692,4 +696,4 @@ int main() {
         } // mission 3
 
     } while( continueOrNot ) ;
-} // main()
+} // main function
